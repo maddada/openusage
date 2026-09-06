@@ -7,6 +7,8 @@ struct ClaudeAccountCard: Equatable, Sendable {
     let displayName: String
     let usesDesktopCredentials: Bool
     let allowsUnattributedPiUsage: Bool
+    var swapAccount: ClaudeSwapAccount? = nil
+    var additionalLogDirectories: [String] = []
 }
 
 /// The launch-time account pass: read which account is signed in at each family's default home,
@@ -116,7 +118,24 @@ struct ProviderAccountAssembly {
             return ProviderAccountAssembly(identityKeysByCard: identityKeys)
         }
 
-        if let claudeIdentity = identityKeys["claude"], !claudeIdentity.contains("|") {
+        let swapAccounts = ClaudeSwapAccount.discover(files: observer.files, home: observer.homeDirectory())
+        if !swapAccounts.isEmpty {
+            AppLog.info(.config, "accounts: discovered \(swapAccounts.count) Claude Swap accounts")
+        }
+        for account in swapAccounts {
+            let source = ProviderAccountSource(kind: .claudeSwap, anchor: account.sessionDirectory, holdsDefaultSource: false)
+            if let index = observations.firstIndex(where: {
+                $0.family == "claude" && $0.identityKey == account.identityKey
+            }) {
+                observations[index].sources.append(source)
+            } else {
+                observations.append(ProviderAccountsStore.Observation(
+                    family: "claude", identityKey: account.identityKey, label: account.email, sources: [source]
+                ))
+            }
+        }
+
+        if let claudeIdentity = identityKeys["claude"], !claudeIdentity.contains("|"), swapAccounts.isEmpty {
             accountsStore.reconcile(with: observations)
             return ProviderAccountAssembly(identityKeysByCard: identityKeys)
         }
@@ -184,6 +203,30 @@ struct ProviderAccountAssembly {
             identityKeys[cardID] = organization.identityKey
         }
 
+        for account in swapAccounts {
+            if let index = cards.firstIndex(where: { $0.identityKey == account.identityKey }) {
+                let existing = cards[index]
+                cards[index] = ClaudeAccountCard(
+                    id: existing.id, identityKey: existing.identityKey, organizationID: existing.organizationID,
+                    displayName: "Claude: \(account.email)", usesDesktopCredentials: existing.usesDesktopCredentials,
+                    allowsUnattributedPiUsage: allowsUnattributedPiUsage,
+                    swapAccount: existing.usesDesktopCredentials ? nil : account
+                )
+                continue
+            }
+            guard let record = records.first(where: {
+                $0.family == "claude" && $0.identityKey == account.identityKey && !$0.removedTombstone
+            }) else { continue }
+            cards.append(ClaudeAccountCard(
+                id: record.id, identityKey: account.identityKey, organizationID: account.organizationID,
+                displayName: "Claude: \(account.email)", usesDesktopCredentials: false,
+                allowsUnattributedPiUsage: allowsUnattributedPiUsage, swapAccount: account
+            ))
+            identityKeys[record.id] = account.identityKey
+        }
+        for index in cards.indices {
+            cards[index].additionalLogDirectories = swapAccounts.map(\.sessionDirectory)
+        }
         return ProviderAccountAssembly(identityKeysByCard: identityKeys, claudeCards: cards)
     }
 

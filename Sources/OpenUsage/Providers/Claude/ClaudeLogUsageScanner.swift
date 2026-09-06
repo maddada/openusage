@@ -28,6 +28,7 @@ actor ClaudeLogUsageScanner {
     private let cacheIdentityOverride: String?
     private let organizationID: String?
     private let accountID: String?
+    private let additionalConfigDirectories: [String]
     private let allowsUnattributedSessions: Bool
     private var sessionOwnership: [String: (
         size: Int, mtime: Date, organizationID: String?, accountID: String?
@@ -66,7 +67,8 @@ actor ClaudeLogUsageScanner {
         cacheIdentityOverride: String? = nil,
         accountUUID: String? = nil,
         organizationUUID: String? = nil,
-        allowsUnattributedSessions: Bool = false
+        allowsUnattributedSessions: Bool = false,
+        additionalConfigDirectories: [String] = []
     ) {
         precondition(cacheIdentityOverride?.isEmpty != true)
         self.environment = environment
@@ -75,6 +77,7 @@ actor ClaudeLogUsageScanner {
         self.cacheIdentityOverride = cacheIdentityOverride
         self.organizationID = organizationUUID?.lowercased()
         self.accountID = accountUUID?.lowercased()
+        self.additionalConfigDirectories = additionalConfigDirectories
         self.allowsUnattributedSessions = allowsUnattributedSessions
     }
 
@@ -142,7 +145,8 @@ actor ClaudeLogUsageScanner {
                 homeURL.appendingPathComponent(".claude"),
             ]
         }
-        let roots = Set(configuredRoots.map { $0.resolvingSymlinksInPath().standardizedFileURL.path })
+        let allRoots = configuredRoots + additionalConfigDirectories.map { URL(fileURLWithPath: expandHome($0)) }
+        let roots = Set(allRoots.map { $0.resolvingSymlinksInPath().standardizedFileURL.path })
             .sorted()
             .joined(separator: "\n")
         return "home=\(home)\nroots=\(roots)"
@@ -185,6 +189,10 @@ actor ClaudeLogUsageScanner {
                 ?? home.appendingPathComponent(".config")
             addIfValid(xdg.appendingPathComponent("claude"))
             addIfValid(home.appendingPathComponent(".claude"))
+        }
+
+        for directory in additionalConfigDirectories {
+            addIfValid(URL(fileURLWithPath: expandHome(directory)))
         }
 
         for sandbox in Self.coworkClaudeDirs(
