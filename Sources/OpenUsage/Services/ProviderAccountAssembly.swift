@@ -9,6 +9,7 @@ struct ClaudeAccountCard: Equatable, Sendable {
     let allowsUnattributedPiUsage: Bool
     var swapAccount: ClaudeSwapAccount? = nil
     var additionalLogDirectories: [String] = []
+    var organizationName: String? = nil
 }
 
 /// The launch-time account pass: read which account is signed in at each family's default home,
@@ -130,7 +131,7 @@ struct ProviderAccountAssembly {
                 observations[index].sources.append(source)
             } else {
                 observations.append(ProviderAccountsStore.Observation(
-                    family: "claude", identityKey: account.identityKey, label: account.email, sources: [source]
+                    family: "claude", identityKey: account.identityKey, label: "\(account.email) (\(account.organizationName ?? "Organization \(account.organizationID.prefix(8))"))", sources: [source]
                 ))
             }
         }
@@ -184,7 +185,7 @@ struct ProviderAccountAssembly {
             cards.append(ClaudeAccountCard(
                 id: record.id, identityKey: defaultIdentity, organizationID: String(organization),
                 displayName: "Claude — \(label)", usesDesktopCredentials: false,
-                allowsUnattributedPiUsage: allowsUnattributedPiUsage
+                allowsUnattributedPiUsage: allowsUnattributedPiUsage, organizationName: label
             ))
             identityKeys.removeValue(forKey: "claude")
             identityKeys[record.id] = defaultIdentity
@@ -198,7 +199,8 @@ struct ProviderAccountAssembly {
             cards.append(ClaudeAccountCard(
                 id: cardID, identityKey: organization.identityKey, organizationID: organization.id,
                 displayName: "Claude — \(organizationLabel(record.label) ?? organization.label)",
-                usesDesktopCredentials: true, allowsUnattributedPiUsage: allowsUnattributedPiUsage
+                usesDesktopCredentials: true, allowsUnattributedPiUsage: allowsUnattributedPiUsage,
+                organizationName: organizationLabel(record.label) ?? organization.label
             ))
             identityKeys[cardID] = organization.identityKey
         }
@@ -208,9 +210,10 @@ struct ProviderAccountAssembly {
                 let existing = cards[index]
                 cards[index] = ClaudeAccountCard(
                     id: existing.id, identityKey: existing.identityKey, organizationID: existing.organizationID,
-                    displayName: "Claude: \(account.email)", usesDesktopCredentials: existing.usesDesktopCredentials,
+                    displayName: account.displayName(fallbackOrganization: existing.organizationName),
+                    usesDesktopCredentials: existing.usesDesktopCredentials,
                     allowsUnattributedPiUsage: allowsUnattributedPiUsage,
-                    swapAccount: existing.usesDesktopCredentials ? nil : account
+                    swapAccount: account, organizationName: account.organizationName ?? existing.organizationName
                 )
                 continue
             }
@@ -219,8 +222,9 @@ struct ProviderAccountAssembly {
             }) else { continue }
             cards.append(ClaudeAccountCard(
                 id: record.id, identityKey: account.identityKey, organizationID: account.organizationID,
-                displayName: "Claude: \(account.email)", usesDesktopCredentials: false,
-                allowsUnattributedPiUsage: allowsUnattributedPiUsage, swapAccount: account
+                displayName: account.displayName(), usesDesktopCredentials: false,
+                allowsUnattributedPiUsage: allowsUnattributedPiUsage, swapAccount: account,
+                organizationName: account.organizationName
             ))
             identityKeys[record.id] = account.identityKey
         }

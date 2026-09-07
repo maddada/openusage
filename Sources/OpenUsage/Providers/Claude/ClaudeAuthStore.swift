@@ -111,6 +111,7 @@ struct ClaudeAuthStore: Sendable {
         allowDesktopInteraction: Bool = false,
         forceDesktopFallback: Bool = false
     ) -> ClaudeCredentialLoad {
+        var stored: [ClaudeCredentialState]
         if let swapAccount {
             var candidates: [ClaudeCredentialState] = []
             let home = URL(fileURLWithPath: swapAccount.root).deletingLastPathComponent()
@@ -127,9 +128,10 @@ struct ClaudeAuthStore: Sendable {
             }
             candidates += orderedStoredCandidates()
             if let vault = loadSwapVaultCredential(swapAccount) { candidates.append(vault) }
-            return ClaudeCredentialLoad(candidates: candidates, desktopStatus: .notFound)
+            stored = candidates
+        } else {
+            stored = desktopOnly ? [] : orderedStoredCandidates()
         }
-        var stored = desktopOnly ? [] : orderedStoredCandidates()
         var desktopStatus: ClaudeDesktopCredentialStatus = .notChecked
         // A working CLI login normally remains the source of truth and avoids a second Keychain prompt.
         // When several organizations have cards, though, its global Keychain token can belong to a
@@ -138,7 +140,7 @@ struct ClaudeAuthStore: Sendable {
         let hasUsableCLILogin = stored.contains {
             $0.hasUsableAccessToken && liveUsageAvailability($0) == .available
         }
-        if forceDesktopFallback || !hasUsableCLILogin || preferOrganizationScopedDesktop {
+        if swapAccount != nil || forceDesktopFallback || !hasUsableCLILogin || preferOrganizationScopedDesktop {
             let expectedUser = expectedIdentityKey?.split(separator: "|").first.map(String.init)
             let result = desktop.load(
                 allowInteraction: allowDesktopInteraction,
@@ -152,11 +154,12 @@ struct ClaudeAuthStore: Sendable {
                     source: .desktop,
                     fullData: nil,
                     inferenceOnly: false
-                ), at: 0)
+                ), at: swapAccount != nil && !desktopOnly && !preferOrganizationScopedDesktop
+                    ? stored.count : 0)
             }
         }
 
-        let candidates = desktopOnly ? stored : applyingEnvironmentToken(to: stored)
+        let candidates = desktopOnly || swapAccount != nil ? stored : applyingEnvironmentToken(to: stored)
         return ClaudeCredentialLoad(candidates: candidates, desktopStatus: desktopStatus)
     }
 

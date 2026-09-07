@@ -52,7 +52,7 @@ If one source holds an expired or "locked out" token, OpenUsage falls back to th
 ## Claude Swap accounts
 
 OpenUsage discovers the saved accounts in Claude Swap's `~/.claude-swap-backup/sequence.json`
-on launch. Each account gets a card labeled with its email. A login already found through Claude Code
+on launch. Each account gets a card labeled with its organization followed by its email. A login already found through Claude Code
 or Desktop shares the same card when both the account and organization match. Restart OpenUsage after
 adding or removing a saved account.
 
@@ -61,11 +61,15 @@ Claude Swap session profile's Keychain entry and credential file. They
 never fall back to another account's default Claude login or an environment token. The saved vault is
 a final, read-only fallback. OpenUsage does not rotate vault tokens or modify Claude Swap's account
 list. If a vault login is stale, launch that account with `cswap run <email>`, then refresh OpenUsage.
+Matching Desktop credentials remain available on the merged card, including when Swap was its
+original source. If a preferred login expires or is rejected, the card tries its other matching
+sources. Every live credential must identify the same account and organization before supplying limits.
 Session profile credentials can renew normally, with updates saved back to that same profile.
 
 Local spending includes Claude Swap session histories as well as the default Claude history. Shared
 history is deduplicated and filtered by its recorded account and organization; entries without account
-ownership stay excluded when multiple accounts are known.
+ownership stay excluded when multiple accounts are known. Broader SDK and Conductor history
+attribution is outside this change's scope; missing ownership is not inferred from the current login.
 
 ## The spend tiles
 

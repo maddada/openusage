@@ -37,7 +37,9 @@ final class ClaudeSwapAccountTests: XCTestCase {
 
         XCTAssertEqual(assembly.claudeCards.count, 3)
         XCTAssertEqual(Set(assembly.claudeCards.map(\.displayName)), [
-            "Claude: work@example.com", "Claude: first@example.com", "Claude: second@example.com"
+            "Claude: Organization (work@example.com)",
+            "Claude: Organization bbbbbbbb (first@example.com)",
+            "Claude: Organization cccccccc (second@example.com)"
         ])
         XCTAssertEqual(assembly.identityKeysByCard.count, 3)
         XCTAssertTrue(assembly.claudeCards.allSatisfy { !$0.allowsUnattributedPiUsage })
@@ -153,11 +155,14 @@ final class ClaudeSwapAccountTests: XCTestCase {
         let timestamp = "2026-02-20T12:00:00Z"
         let owned = #"{"ownerOrganizationUuid":"org-a","ownerAccountUuid":"user-a"}"# + "\n" +
             ClaudeLogFixture.usageLine(timestamp: timestamp, input: 100, output: 10)
-        let sharedHome = try ClaudeLogFixture.makeUserHome(claudeFiles: ["project/shared.jsonl": owned])
+        let otherOwned = #"{"ownerOrganizationUuid":"org-b","ownerAccountUuid":"user-b"}"# + "\n" +
+            ClaudeLogFixture.usageLine(timestamp: timestamp, input: 999, messageID: "other", requestID: "other")
+        let sharedHome = try ClaudeLogFixture.makeUserHome(claudeFiles: [
+            "project/shared.jsonl": owned, "project/other.jsonl": otherOwned
+        ])
         let session = try ClaudeLogFixture.makeHome(files: [
             "project/shared.jsonl": owned,
-            "project/other.jsonl": #"{"ownerOrganizationUuid":"org-b","ownerAccountUuid":"user-b"}"# + "\n" +
-                ClaudeLogFixture.usageLine(timestamp: timestamp, input: 999, messageID: "other", requestID: "other"),
+            "project/other.jsonl": otherOwned,
             "project/unowned.jsonl": ClaudeLogFixture.usageLine(timestamp: timestamp, input: 999,
                                                                 messageID: "unowned", requestID: "unowned")
         ])
@@ -165,13 +170,15 @@ final class ClaudeSwapAccountTests: XCTestCase {
             try? FileManager.default.removeItem(at: sharedHome)
             try? FileManager.default.removeItem(at: session)
         }
-        let scanner = ClaudeLogUsageScanner(
-            environment: FakeEnvironment([:]), homeDirectory: { sharedHome },
-            incrementalScanner: IncrementalJSONLScanner<ClaudeLogUsageScanner.Entry>(),
-            accountUUID: "user-a", organizationUUID: "org-a", additionalConfigDirectories: [session.path]
-        )
-        let result = await scanner.scan(now: Date(timeIntervalSince1970: 1_771_603_200), pricing: TestPricing.bundled)
-        XCTAssertEqual(result?.series.daily.reduce(0) { $0 + $1.totalTokens }, 110)
+        for (user, org, expected) in [("user-a", "org-a", 110), ("user-b", "org-b", 999)] {
+            let scanner = ClaudeLogUsageScanner(
+                environment: FakeEnvironment([:]), homeDirectory: { sharedHome },
+                incrementalScanner: IncrementalJSONLScanner<ClaudeLogUsageScanner.Entry>(),
+                accountUUID: user, organizationUUID: org, additionalConfigDirectories: [session.path]
+            )
+            let result = await scanner.scan(now: Date(timeIntervalSince1970: 1_771_603_200), pricing: TestPricing.bundled)
+            XCTAssertEqual(result?.series.daily.reduce(0) { $0 + $1.totalTokens }, expected)
+        }
     }
 }
 

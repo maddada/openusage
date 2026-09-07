@@ -7,6 +7,12 @@ struct ClaudeSwapAccount: Equatable, Sendable {
     let email: String
     let identityKey: String
     let organizationID: String
+    var organizationName: String? = nil
+
+    func displayName(fallbackOrganization: String? = nil) -> String {
+        let organization = organizationName ?? fallbackOrganization ?? "Organization \(organizationID.prefix(8))"
+        return "Claude: \(organization) (\(email))"
+    }
 
     var sessionDirectory: String {
         let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
@@ -40,7 +46,9 @@ struct ClaudeSwapAccount: Equatable, Sendable {
                 let organization = org.uuidString.lowercased()
                 return Self(root: root, slot: slot, email: email,
                             identityKey: "\(uuid.uuidString.lowercased())|\(organization)",
-                            organizationID: organization)
+                            organizationID: organization,
+                            organizationName: (account["organizationName"] as? String)?
+                                .trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty)
             }
         } catch {
             // Do not include JSON or decoder descriptions, which can contain credential material.
