@@ -27,9 +27,52 @@ skipped and zero failures. Full `swift test` passed 1,342 tests, with three skip
 app was launched on the host, and all four discovered Claude cards completed live refreshes
 successfully. `git diff --check` passed.
 
-A new Tart run could not be performed: the existing VM reported running but showed a black window,
-had no discoverable IP through DHCP, ARP, or the guest agent, and timed out on SSH at its previous IP.
-The live VM evidence below is from 2026-09-07, not a new run of the review fixes.
+The Tart VM was recovered later the same day by unlocking its macOS login screen. The exact updated
+app and host-compiled test bundles were copied through a read-only shared folder. Inside the VM
+(macOS 15.7.7, build 24G720), all four new regression tests passed. The full suite also passed:
+1,342 passed, three skipped, zero failures (1,345 total, including the CLI and Swift Testing suites).
+Compilation used the host Xcode toolchain; test execution used the VM's staged XCTest runtime.
+
+The first full VM run found a missing fixture: the provisioning-profile test sources a repository
+shell script using its compiled absolute path. After copying that exact script to the expected
+guest path, the full suite was rerun and passed. No production code change was needed.
+
+### Repeated Live Check on 2026-09-13
+
+The updated app was launched through the guest's `cua-driver` CLI from
+`/Users/admin/openusage-qa/20260913/OpenUsage.app`. Its executable SHA-256 matches the host build:
+`059369d3aeeb95c37cefadde69e5cf779ad3e549d591df354f148b19dae77793`.
+
+Claude Desktop remained signed into the work account. Two `cswap run --require-session` instances
+reached normal Claude Code prompts in separate personal and work session directories and remained
+running during the checks. The personal instance used Claude Code 2.1.263; Code's automatic update
+had installed 2.1.270 by the time the work instance started. Swap was 0.26.0.
+
+The default was switched from work to personal and back to work. The updated app's bundled CLI
+forced live refreshes through GUI Terminal after each switch. Both runs returned exactly two cards,
+with identical IDs and organization-first names, no errors, and neither card marked stale:
+
+| Identity | Card ID | Session usage in both states | Weekly usage in both states |
+| --- | --- | --- | --- |
+| Work | `claude` | 4% | 0% |
+| Personal | `claude@32ae3dfb` | 1% | 52% |
+
+After those refreshes, Claude Code's auth-status command confirmed the expected account and
+organization for the default and both session directories. Separate profile and usage requests
+using each session's own credential file also succeeded, verified both account and organization
+UUIDs, and returned the corresponding limits above. These requests were read-only; no model
+prompts were submitted and no real credentials were deliberately expired or revoked.
+
+The opt-in live XCTest also passed, but its default auth store can select the global Keychain
+login even with a session directory override. The per-session isolation evidence therefore comes
+from the explicit profile-and-usage probes, rather than treating that account-agnostic test as
+proof of both identities. The original work default was restored.
+
+The fresh GUI app independently completed a scheduled refresh at 05:23 UTC with both Claude
+cards successful. Its log retained Desktop, default/session, and read-only vault sources on the
+work card, and session/vault sources on the personal card. The work card's previously expired
+CLI/session sources were live again after normal Swap and Claude Code startup. The dashboard
+also showed the expected work organization label and per-account session limits.
 
 ## Automated Coverage
 
