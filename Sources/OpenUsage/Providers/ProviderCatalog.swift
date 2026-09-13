@@ -33,7 +33,8 @@ enum ProviderCatalog {
                         expectedIdentityKey: identity,
                         desktopOnly: card.usesDesktopCredentials,
                         swapAccount: card.swapAccount,
-                        preferOrganizationScopedDesktop: claudeCards.count > 1 && !card.usesDesktopCredentials
+                        preferOrganizationScopedDesktop: claudeCards.count > 1
+                            && card.organizationID != nil && !card.usesDesktopCredentials
                     ),
                     logUsageScanner: scanner,
                     allowsUnattributedPiUsage: card.allowsUnattributedPiUsage

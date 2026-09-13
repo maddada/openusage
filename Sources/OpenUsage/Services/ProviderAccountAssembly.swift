@@ -3,7 +3,7 @@ import Foundation
 struct ClaudeAccountCard: Equatable, Sendable {
     let id: String
     let identityKey: String
-    let organizationID: String
+    let organizationID: String?
     let displayName: String
     let usesDesktopCredentials: Bool
     let allowsUnattributedPiUsage: Bool
@@ -186,6 +186,18 @@ struct ProviderAccountAssembly {
                 id: record.id, identityKey: defaultIdentity, organizationID: String(organization),
                 displayName: "Claude — \(label)", usesDesktopCredentials: false,
                 allowsUnattributedPiUsage: allowsUnattributedPiUsage, organizationName: label
+            ))
+            identityKeys.removeValue(forKey: "claude")
+            identityKeys[record.id] = defaultIdentity
+        } else if let defaultIdentity = defaultClaudeIdentity,
+                  let record = records.first(where: {
+                      $0.family == "claude" && $0.identityKey == defaultIdentity && !$0.removedTombstone
+                  }) {
+            // A UUID without an organization remains a default login, separate from scoped cards.
+            cards.append(ClaudeAccountCard(
+                id: record.id, identityKey: defaultIdentity, organizationID: nil,
+                displayName: "Claude: \(record.label ?? "Default Login")", usesDesktopCredentials: false,
+                allowsUnattributedPiUsage: allowsUnattributedPiUsage
             ))
             identityKeys.removeValue(forKey: "claude")
             identityKeys[record.id] = defaultIdentity

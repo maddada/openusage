@@ -56,6 +56,11 @@ on launch. Each account gets a card labeled with its organization followed by it
 or Desktop shares the same card when both the account and organization match. Restart OpenUsage after
 adding or removing a saved account.
 
+If the default login identifies an account but has no organization ID, it remains available as a
+separate default card alongside saved Swap accounts. OpenUsage does not guess which saved
+organization it belongs to. Its spending stays excluded while multiple accounts are known, until
+the login identifies its organization.
+
 Saved accounts use the active default login when it names that exact account, followed by their own
 Claude Swap session profile's Keychain entry and credential file. They
 never fall back to another account's default Claude login or an environment token. The saved vault is
@@ -64,6 +69,8 @@ list. If a vault login is stale, launch that account with `cswap run <email>`, t
 Matching Desktop credentials remain available on the merged card, including when Swap was its
 original source. If a preferred login expires or is rejected, the card tries its other matching
 sources. Every live credential must identify the same account and organization before supplying limits.
+Logins that can read live usage are tried before logins with limited permissions, so a default login
+without `user:profile` does not hide working Session and Weekly limits from a matching saved session.
 Session profile credentials can renew normally, with updates saved back to that same profile.
 
 Local spending includes Claude Swap session histories as well as the default Claude history. Shared

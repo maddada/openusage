@@ -159,6 +159,12 @@ struct ClaudeAuthStore: Sendable {
             }
         }
 
+        // A scope-limited login produces a local-only snapshot, so try every live-capable matching
+        // source first. Preserve source preference within each group, including Desktop preference.
+        if swapAccount != nil {
+            stored = stored.filter { liveUsageAvailability($0) == .available }
+                + stored.filter { liveUsageAvailability($0) != .available }
+        }
         let candidates = desktopOnly || swapAccount != nil ? stored : applyingEnvironmentToken(to: stored)
         return ClaudeCredentialLoad(candidates: candidates, desktopStatus: desktopStatus)
     }

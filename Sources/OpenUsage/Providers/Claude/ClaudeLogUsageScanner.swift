@@ -91,6 +91,12 @@ actor ClaudeLogUsageScanner {
     /// no log files exist (the spend tiles then render "No data"); returns an empty series when logs
     /// exist but have no usage in the window.
     func scan(daysBack: Int = 30, now: Date = Date(), pricing: ModelPricing) async -> LogUsageScan? {
+        // A UUID-only default login still has a card, but cannot claim any organization's history
+        // once multiple identities are known. The unscoped single-account scanner remains unchanged.
+        if accountID != nil, organizationID == nil, !allowsUnattributedSessions {
+            AppLog.info(LogTag.plugin("claude"), "local spending excluded: default login has no organization and multiple accounts are known")
+            return nil
+        }
         let since = JSONLScanning.sinceDate(daysBack: daysBack, now: now)
         let cacheIdentity = parseCacheIdentity()
         let roots = claudeRoots()

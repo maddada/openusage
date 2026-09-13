@@ -2,6 +2,35 @@
 
 Issue: #1227. PR: #1226.
 
+## Review Fixes Verified on 2026-09-13
+
+Merged current upstream `main` (`bb055e2`) and resolved the scanner conflict by keeping both Swap
+history folders and upstream's session ownership, cancellation, and nested workflow handling.
+
+`ClaudeSwapReviewRegressionTests` adds four cases:
+
+- A default login with an account UUID but no organization remains available beside Swap, including
+  when both logins have the same account UUID. Repeated discovery keeps the IDs stable, and both
+  providers retain their own credentials.
+- A matching full-scope Swap session supplies Session and Weekly limits when the default login
+  lacks `user:profile`.
+- That session is still rejected if its profile names another organization; limited-scope fallback
+  keeps the existing re-login warning without displaying the other organization's limits.
+- A UUID-only default card does not claim local history when multiple identities are known.
+
+All four new tests failed against the merged code before these fixes, then passed after them.
+`swift test --filter 'Claude|ProviderAccountAssemblyTests'` passed 156 tests, with two opt-in tests
+skipped and zero failures. Full `swift test` passed 1,342 tests, with three skipped and zero failures
+(1,345 total, including XCTest and Swift Testing).
+
+`CONFIG=debug ./script/build_and_run.sh build` rebuilt and signed the app successfully. The fresh
+app was launched on the host, and all four discovered Claude cards completed live refreshes
+successfully. `git diff --check` passed.
+
+A new Tart run could not be performed: the existing VM reported running but showed a black window,
+had no discoverable IP through DHCP, ARP, or the guest agent, and timed out on SSH at its previous IP.
+The live VM evidence below is from 2026-09-07, not a new run of the review fixes.
+
 ## Automated Coverage
 
 The focused Claude suite runs the production discovery, credential selection, refresh, layout,
