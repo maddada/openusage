@@ -36,10 +36,12 @@ struct ShellEnvironmentSnapshot: Codable, Equatable, Sendable {
     }
 }
 
-/// UserDefaults persistence for the snapshot (`openusage.shellEnvSnapshot.v1`). A class so the
+/// UserDefaults persistence for the snapshot (`openusage.shellEnvSnapshot.v2`). A class so the
 /// post-launch refresh task can carry it across actors; UserDefaults itself is thread-safe.
 final class ShellEnvironmentSnapshotStore: @unchecked Sendable {
-    static let storageKey = "openusage.shellEnvSnapshot.v1"
+    // v2 captures Swap location keys. Older snapshots cannot establish their absence; ignoring
+    // them makes startup capture the shell before account discovery on the first upgraded launch.
+    static let storageKey = "openusage.shellEnvSnapshot.v2"
 
     /// The snapshot as it existed at process start, decoded once and memoized (a `static let` is
     /// thread-safe lazy). `ProcessEnvironmentReader` consults this on every identity-key read, so it

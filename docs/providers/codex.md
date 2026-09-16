@@ -28,6 +28,7 @@ OpenUsage shows accounts saved by [Codex Swap (`xswap`)](https://github.com/madd
 Each account and workspace gets its own card, labeled with its alias and email. Cards and pins stay
 with the same account when you switch the default login. Restart OpenUsage after adding, removing,
 or renaming an account. Custom locations set with `XSWAP_HOME` or `XDG_DATA_HOME` are supported.
+Upgrading from a version without Swap support refreshes saved shell settings before account discovery.
 
 - Matching file, Keychain, and Swap logins share a card. If one expires, OpenUsage tries another
   login for that account. Keychain-only accounts and Swap custom main homes are included, even
