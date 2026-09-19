@@ -19,6 +19,9 @@ struct MiniMeter: Identifiable, Hashable {
     let severity: WidgetData.MeterSeverity?
     /// The whole-percent reading beside the bar ("57%"), rounded the same way the fill is.
     let percentText: String
+    /// True when this is the last reading the provider managed to report rather than a current one.
+    /// Drawn faded, so a bar that is standing in for fresh data never reads as fresh.
+    let isOutdated: Bool
 
     /// Most bars a mini card shows. Three is what fits the 320pt popover in either style with the
     /// provider name still readable; a provider with more bounded metrics shows its first three.
@@ -32,6 +35,7 @@ struct MiniMeter: Identifiable, Hashable {
         self.fraction = data.fraction
         self.severity = data.meterState(now: now).severity
         self.percentText = "\(Int((data.fraction * 100).rounded()))%"
+        self.isOutdated = data.isOutdated
     }
 
     /// The bars for one provider's mini card: its rows in card order, meterless ones dropped, capped

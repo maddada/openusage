@@ -10,6 +10,7 @@ import SwiftUI
 struct MiniMeterBar: View {
     let severity: WidgetData.MeterSeverity?
     let fraction: Double
+    var isOutdated: Bool = false
 
     @AppStorage(DensitySetting.key) private var density = DensitySetting.regular
 
@@ -23,6 +24,7 @@ struct MiniMeterBar: View {
             }
         }
         .frame(height: density.miniMeterHeight)
+        .opacity(isOutdated ? MiniMeter.outdatedOpacity : 1)
         .animation(Motion.spring, value: fraction)
     }
 }
@@ -47,12 +49,14 @@ struct MiniMeterPill: View {
                     Text(meter.percentText)
                         .font(.system(size: density.miniMeterPointSize, weight: .semibold))
                         .foregroundStyle(.primary)
+                        .opacity(meter.isOutdated ? MiniMeter.outdatedOpacity : 1)
                         .monospacedDigit()
                         // A truncated percentage is worse than no percentage: "31%" clipped to "3"
                         // reads as a real number. The pill keeps its width and the provider name
                         // gives way instead (see `fixedSize` below).
                         .fixedSize(horizontal: true, vertical: false)
-                    MiniMeterBar(severity: meter.severity, fraction: meter.fraction)
+                    MiniMeterBar(severity: meter.severity, fraction: meter.fraction,
+                                 isOutdated: meter.isOutdated)
                         .frame(width: density.miniMeterBarWidth)
                 }
                 .padding(.horizontal, 4)
@@ -89,11 +93,13 @@ struct MiniMeterLine: View {
                         Spacer(minLength: 0)
                         Text(meter.percentText)
                             .foregroundStyle(.primary)
+                            .opacity(meter.isOutdated ? MiniMeter.outdatedOpacity : 1)
                             .monospacedDigit()
                             .fixedSize(horizontal: true, vertical: false)
                     }
                     .font(.system(size: density.miniMeterPointSize, weight: .semibold))
-                    MiniMeterBar(severity: meter.severity, fraction: meter.fraction)
+                    MiniMeterBar(severity: meter.severity, fraction: meter.fraction,
+                                 isOutdated: meter.isOutdated)
                 }
                 // A cap, never a fixed width. `frame(width:)` here made three columns demand more
                 // than the 320pt popover's content area allows, which pushed the whole dashboard
@@ -115,6 +121,13 @@ extension MiniMeter {
     /// One spoken summary for a whole mini card ("Session 8 percent, Weekly 30 percent"), so the bars
     /// read as a sentence instead of a run of loose numbers.
     static func accessibilityLabel(_ meters: [MiniMeter]) -> String {
-        meters.map { "\($0.title) \($0.percentText)" }.joined(separator: ", ")
+        meters.map { meter in
+            let reading = "\(meter.title) \(meter.percentText)"
+            return meter.isOutdated ? "\(reading), outdated" : reading
+        }.joined(separator: ", ")
     }
+
+    /// How far a stand-in reading recedes. Enough to read as "not current" beside a live bar, still
+    /// legible on its own.
+    static let outdatedOpacity: Double = 0.45
 }

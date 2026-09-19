@@ -94,6 +94,14 @@ caret. Expanding a mini card returns the card exactly as you left it. Turning th
 every card without forgetting what was collapsed, so turning it back on picks up where you were.
 Resetting a provider (or all settings) restores its full card.
 
+## When a provider cannot answer
+
+Some providers rate limit their usage endpoints, and a rate-limited card has no meters to report. The
+card keeps showing the last real reading instead of blanking, drawn faded so it never passes for
+current, with the header's warning saying what happened. Reset countdowns disappear from a faded row,
+since the stored reading has no fresh reset time behind it. A reading older than a week stops standing
+in and the row reads "No data" again.
+
 ## Right-click menus
 
 Every row: **Hide · Star for menu bar / Unstar · Refresh \<provider\> · Customize…** (Customize opens straight to that provider's metrics.)
