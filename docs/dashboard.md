@@ -58,6 +58,12 @@ costs the width the account label needs, so **Hide Agent Name for Multi-Account 
 still says which agent the card belongs to. A provider with a single account has no prefix to drop and
 looks the same either way.
 
+Each card is named after the address signed into it. The organization and workspace wording the
+providers generate, like `jane@example.com's Organization` or `Workspace 0e1e7f6e`, is left out: it
+repeats what the address already says and it was what survived truncation in a 320pt header. If one
+address is signed into more than one Claude organization, those cards show the organization again,
+because that is the only thing telling them apart. For Codex, give one of them an alias instead.
+
 Account names often include an email address. **Hide Emails** (Settings, Privacy) masks them here and
 everywhere else the app shows an account, keeping just enough to tell accounts apart:
 `j•••e@•••••.•••`.
