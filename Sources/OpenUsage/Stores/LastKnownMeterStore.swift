@@ -29,6 +29,10 @@ final class LastKnownMeterStore {
     /// provider reports on.
     static let maximumAge: TimeInterval = 7 * 24 * 60 * 60
 
+    /// How far a stand-in reading recedes. Enough to read as "not current" beside a live bar, still
+    /// legible on its own.
+    static let outdatedOpacity: Double = 0.45
+
     init(defaults: UserDefaults = .standard,
          key: String = "openusage.lastKnownMeters.v1",
          now: @escaping () -> Date = Date.init) {

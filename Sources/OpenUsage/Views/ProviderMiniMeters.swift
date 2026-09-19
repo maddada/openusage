@@ -24,7 +24,7 @@ struct MiniMeterBar: View {
             }
         }
         .frame(height: density.miniMeterHeight)
-        .opacity(isOutdated ? MiniMeter.outdatedOpacity : 1)
+        .opacity(isOutdated ? LastKnownMeterStore.outdatedOpacity : 1)
         .animation(Motion.spring, value: fraction)
     }
 }
@@ -49,7 +49,7 @@ struct MiniMeterPill: View {
                     Text(meter.percentText)
                         .font(.system(size: density.miniMeterPointSize, weight: .semibold))
                         .foregroundStyle(.primary)
-                        .opacity(meter.isOutdated ? MiniMeter.outdatedOpacity : 1)
+                        .opacity(meter.isOutdated ? LastKnownMeterStore.outdatedOpacity : 1)
                         .monospacedDigit()
                         // A truncated percentage is worse than no percentage: "31%" clipped to "3"
                         // reads as a real number. The pill keeps its width and the provider name
@@ -93,7 +93,7 @@ struct MiniMeterLine: View {
                         Spacer(minLength: 0)
                         Text(meter.percentText)
                             .foregroundStyle(.primary)
-                            .opacity(meter.isOutdated ? MiniMeter.outdatedOpacity : 1)
+                            .opacity(meter.isOutdated ? LastKnownMeterStore.outdatedOpacity : 1)
                             .monospacedDigit()
                             .fixedSize(horizontal: true, vertical: false)
                     }
@@ -126,8 +126,4 @@ extension MiniMeter {
             return meter.isOutdated ? "\(reading), outdated" : reading
         }.joined(separator: ", ")
     }
-
-    /// How far a stand-in reading recedes. Enough to read as "not current" beside a live bar, still
-    /// legible on its own.
-    static let outdatedOpacity: Double = 0.45
 }
