@@ -30,6 +30,9 @@ actor ClaudeLogUsageScanner {
     private let accountID: String?
     private let additionalConfigDirectories: [String]
     private let allowsUnattributedSessions: Bool
+    /// Set when several Claude accounts are signed in: history stops being per-account and
+    /// becomes one combined figure repeated across the group.
+    private let sharesLocalHistory: Bool
     private var sessionOwnership: [String: (
         size: Int, mtime: Date, identity: ClaudeSessionIdentity
     )] = [:]
@@ -72,6 +75,7 @@ actor ClaudeLogUsageScanner {
         accountUUID: String? = nil,
         organizationUUID: String? = nil,
         allowsUnattributedSessions: Bool = false,
+        sharesLocalHistory: Bool = false,
         additionalConfigDirectories: [String] = [],
         readOwnershipData: @escaping @Sendable (URL) throws -> Data = {
             try Data(contentsOf: $0, options: .mappedIfSafe)
@@ -86,6 +90,7 @@ actor ClaudeLogUsageScanner {
         self.accountID = accountUUID?.lowercased()
         self.additionalConfigDirectories = additionalConfigDirectories
         self.allowsUnattributedSessions = allowsUnattributedSessions
+        self.sharesLocalHistory = sharesLocalHistory
         self.readOwnershipData = readOwnershipData
     }
 
@@ -95,7 +100,7 @@ actor ClaudeLogUsageScanner {
     func scan(daysBack: Int = 30, now: Date = Date(), pricing: ModelPricing) async -> LogUsageScan? {
         // A UUID-only default login still has a card, but cannot claim any organization's history
         // once multiple identities are known. The unscoped single-account scanner remains unchanged.
-        if accountID != nil, organizationID == nil, !allowsUnattributedSessions {
+        if accountID != nil, organizationID == nil, !allowsUnattributedSessions, !sharesLocalHistory {
             AppLog.info(LogTag.plugin("claude"), "local spending excluded: default login has no organization and multiple accounts are known")
             return nil
         }
@@ -283,6 +288,15 @@ actor ClaudeLogUsageScanner {
         for file in files {
             guard !Task.isCancelled else { return [] }
             guard seenPaths.insert(file.path).inserted else { continue }
+            // Shared mode keeps every session on this Mac, including the ones no account claims.
+            // Claude Code writes no account id into a session log, so ownership resolves for almost
+            // nothing once several accounts are signed in, and per-account filtering would throw the
+            // whole history away. Every card in the group then shows this same combined total, which
+            // the "Shared" badge says out loud.
+            if sharesLocalHistory {
+                ownedFiles.append(file)
+                continue
+            }
             let canonicalPath = URL(fileURLWithPath: file.path).resolvingSymlinksInPath().path
             if canonicalPath.hasPrefix(coworkPrefix) {
                 let components = canonicalPath.dropFirst(coworkPrefix.count).split(separator: "/")

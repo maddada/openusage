@@ -103,6 +103,10 @@ struct WidgetGroupedListView: View {
 
     private enum DashboardMetricCardRow: Identifiable {
         case metric(ResolvedRow)
+        /// One "Shared" pill introducing the run of combined-history rows beneath it. A pill on every
+        /// row repeated the same sentence three or four times and, beside a label and a value, pushed
+        /// the card wider than the popover, squeezing out its side padding.
+        case sharedNote
         case divider
         /// #596: the provider's quick-link buttons (Status / Console / Dashboard ...), pinned at the
         /// bottom of the collapsible expanded section. They collapse with the caret — part of the
@@ -113,6 +117,8 @@ struct WidgetGroupedListView: View {
             switch self {
             case .metric(let row):
                 "metric:\(row.descriptor.id)"
+            case .sharedNote:
+                "shared-history-note"
             case .divider:
                 "expanded-divider"
             case .links:
@@ -149,6 +155,8 @@ struct WidgetGroupedListView: View {
                 case .metric(let entry):
                     row(entry.descriptor, data: entry.data, in: providerID,
                         condensedTop: condensedIDs.contains(entry.descriptor.id))
+                case .sharedNote:
+                    sharedHistoryNote
                 case .links(let links):
                     ProviderLinksView(links: links)
                 case .divider:
@@ -178,10 +186,34 @@ struct WidgetGroupedListView: View {
         // content (metrics OR links), so a links-only provider still gets a caret to reveal its buttons.
         let hasLinks = !links.isEmpty
         let hasExpandedContent = hasExpandedMetrics || hasLinks
-        return alwaysRows.map(DashboardMetricCardRow.metric)
+        return introducingSharedRun(alwaysRows.map(DashboardMetricCardRow.metric))
             + (hasExpandedContent ? [.divider] : [])
-            + (isExpanded && !expandedRows.isEmpty ? expandedRows.map(DashboardMetricCardRow.metric) : [])
+            + (isExpanded && !expandedRows.isEmpty
+                ? introducingSharedRun(expandedRows.map(DashboardMetricCardRow.metric)) : [])
             + (isExpanded && hasLinks ? [.links(links)] : [])
+    }
+
+    /// Puts one "Shared" pill in front of the first combined-history row in a section, so the run of
+    /// them is labeled once. Each section is introduced separately, since the caret can put shared
+    /// rows on both sides of it and a pill above the fold would not explain rows below it.
+    private func introducingSharedRun(_ rows: [DashboardMetricCardRow]) -> [DashboardMetricCardRow] {
+        guard let first = rows.firstIndex(where: { row in
+            if case .metric(let entry) = row { return entry.data.isSharedHistory }
+            return false
+        }) else { return rows }
+        var result = rows
+        result.insert(.sharedNote, at: first)
+        return result
+    }
+
+    /// The pill itself, on its own line at the metric labels' indent.
+    private var sharedHistoryNote: some View {
+        HStack(spacing: 0) {
+            SharedHistoryBadge()
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, density.textRowPadding)
     }
 
     /// The centered caret at the bottom of a provider card that reveals or hides its On Demand metrics
