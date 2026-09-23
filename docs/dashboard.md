@@ -81,9 +81,17 @@ Resetting a provider (or all settings) restores its full card.
 
 Some providers rate limit their usage endpoints, and a rate-limited card has no meters to report. The
 card keeps showing the last real reading instead of blanking, drawn faded so it never passes for
-current, with the header's warning saying what happened. Reset countdowns disappear from a faded row,
-since the stored reading has no fresh reset time behind it. A reading older than a week stops standing
-in and the row reads "No data" again.
+current, with the header's warning saying what happened. A faded row makes no timing claims (no reset
+countdown, no "Not started"), since the stored reading has no current window behind it.
+
+A few rules keep it honest:
+
+- It only stands in while the provider reports no meters at all. If a successful response simply
+  leaves a metric out (Claude's Extra Usage once you turn it off), that row reads "No data".
+- It belongs to the account that measured it. After switching accounts on the same card, the old
+  account's reading never shows.
+- Its age counts from when the provider measured it. Past a week it stops standing in and the row
+  reads "No data" again.
 
 ## Right-click menus
 

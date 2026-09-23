@@ -545,15 +545,19 @@ final class WidgetDataStore {
 
     func data(for descriptor: WidgetDescriptor) -> WidgetData {
         var result: WidgetData
-        if let snapshot = snapshots[descriptor.providerID],
+        let snapshot = snapshots[descriptor.providerID]
+        let identityKey = providerIdentityKeys[descriptor.providerID]
+        if let snapshot,
            let line = snapshot.line(label: descriptor.metricLabel),
            let data = resolve(line, descriptor: descriptor) {
             result = data
-            lastKnownMeters.record(data, for: descriptor.id)
-        } else if let restored = lastKnownMeters.restore(onto: descriptor.sample, for: descriptor.id) {
-            // The provider cannot answer for this metric right now (Claude's usage endpoint rate
-            // limits, and a limited card reports no meters at all). Keep the last real reading on
-            // screen, faded and flagged, rather than dropping a bar the user was watching.
+            lastKnownMeters.record(data, for: descriptor.id, capturedAt: snapshot.refreshedAt, identityKey: identityKey)
+        } else if !(snapshot?.lines.contains(where: \.isProgress) ?? false),
+                  let restored = lastKnownMeters.restore(onto: descriptor.sample, for: descriptor.id, identityKey: identityKey) {
+            // The provider cannot answer right now (Claude's usage endpoint rate limits, and a limited
+            // card reports no meters at all). Keep the last real reading on screen, faded and flagged,
+            // rather than dropping a bar the user was watching. A response that still carries meters
+            // answered, so a metric missing from it (Extra Usage turned off) is gone, not unavailable.
             result = restored
         } else {
             // No real metric line backs this placed tile, so the sample's numbers are placeholders.

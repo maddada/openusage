@@ -9,14 +9,20 @@ import Foundation
 /// written to disk.
 ///
 /// Only `used` and `limit` are kept. A reset date would age into a countdown that runs backwards, so
-/// a restored reading carries none: the bar and its percentage are exactly as true as when they were
-/// captured, and the row is marked outdated so nothing here passes for current.
+/// a restored reading carries no timing at all: the bar and its percentage are exactly as true as when
+/// they were captured, and the row is marked outdated so nothing here passes for current.
+///
+/// Each reading also carries the account that produced it and the time of that measurement, so the
+/// same ownership rule as the snapshot cache applies, and reading an old snapshot never renews it.
 @MainActor
 final class LastKnownMeterStore {
-    private struct Reading: Codable {
+    private struct Reading: Codable, Equatable {
         let used: Double
         let limit: Double
+        /// When the provider measured it (the snapshot's refresh time), not when it was displayed.
         let capturedAt: Date
+        /// The card's account identity at capture, `nil` for providers without one.
+        let identityKey: String?
     }
 
     private let defaults: UserDefaults
@@ -47,30 +53,45 @@ final class LastKnownMeterStore {
         }
     }
 
-    /// Remember a real bounded reading. Unbounded rows and no-data rows are ignored: there is no bar
-    /// to restore for them.
-    func record(_ data: WidgetData, for descriptorID: String) {
+    /// Remember a real bounded reading measured at `capturedAt` by the account `identityKey`.
+    /// Unbounded rows and no-data rows are ignored: there is no bar to restore for them. Called on
+    /// every render, so an unchanged or older reading writes nothing.
+    func record(_ data: WidgetData, for descriptorID: String, capturedAt: Date, identityKey: String?) {
         guard data.hasData, let limit = data.limit, limit > 0, !data.isChart else { return }
-        readings[descriptorID] = Reading(used: data.used, limit: limit, capturedAt: now())
+        let reading = Reading(used: data.used, limit: limit, capturedAt: capturedAt, identityKey: identityKey)
+        if let stored = readings[descriptorID],
+           stored == reading || (stored.capturedAt > capturedAt && stored.identityKey == identityKey) {
+            return
+        }
+        readings[descriptorID] = reading
         persist()
     }
 
     /// The stored reading applied back onto `sample`, or `nil` when nothing usable is stored. The
     /// result is flagged `isOutdated` so every surface can show it as the aged figure it is.
-    func restore(onto sample: WidgetData, for descriptorID: String) -> WidgetData? {
+    ///
+    /// Ownership follows the snapshot cache's launch guard: when the card's current account is known,
+    /// only a reading that account produced may stand in. An unresolved current account can't verify
+    /// either way, so it keeps the reading, as the cache does.
+    func restore(onto sample: WidgetData, for descriptorID: String, identityKey: String?) -> WidgetData? {
         guard let reading = readings[descriptorID],
               now().timeIntervalSince(reading.capturedAt) < Self.maximumAge else { return nil }
+        if let identityKey, reading.identityKey != identityKey { return nil }
         var result = sample
         result.hasData = true
         result.used = reading.used
         result.limit = reading.limit
+        // The current window is unknown, so drop every timing claim: no reset date or expiries, no
+        // cycle length ("Resets in 30d"), and no session-start signal ("Not started").
         result.resetsAt = nil
         result.expiriesAt = []
+        result.periodDurationMs = nil
+        result.sessionStartSignal = nil
         result.isOutdated = true
         return result
     }
 
-    /// Drops everything, for "Reset All Settings".
+    /// Drops every stored reading.
     func clear() {
         readings = [:]
         defaults.removeObject(forKey: key)
