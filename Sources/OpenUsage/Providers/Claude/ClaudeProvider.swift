@@ -25,6 +25,11 @@ final class ClaudeProvider: ProviderRuntime {
     /// combined local history instead, badged "Shared". Mirrors Codex.
     let sharesLocalHistory: Bool
     var allowsCachedLocalHistory: Bool { !sharesLocalHistory }
+    /// The pi slice this card reads. pi maps Anthropic usage to the "claude" family and filters by
+    /// exact card ID, so a shared card asks for the family: an account card such as
+    /// `claude@1234abcd` would otherwise get nothing and, as the freshest shared source, drop pi usage
+    /// from every card in the group.
+    var piCardID: String { sharesLocalHistory ? "claude" : provider.id }
     let now: @Sendable () -> Date
     let pricing: @Sendable () async -> ModelPricing
 
@@ -321,7 +326,7 @@ final class ClaudeProvider: ProviderRuntime {
         let nativeScan = await logUsageScanner.scan(now: now(), pricing: pricing)
         // Shared mode already means "everything this Mac did", so pi usage belongs in it too.
         let piScan = allowsUnattributedPiUsage || sharesLocalHistory
-            ? await PiUsageScanner.shared.scan(cardID: provider.id, now: now(), pricing: pricing)
+            ? await PiUsageScanner.shared.scan(cardID: piCardID, now: now(), pricing: pricing)
             : nil
         var usageHistory: ProviderUsageHistory?
         // Cancellation can land between the native and pi scans. Treat the pair as one unit so a

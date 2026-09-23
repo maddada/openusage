@@ -95,7 +95,8 @@ is deduplicated.
 
 With several known Claude accounts, every card shows the same combined local spending and usage
 trend. One **Shared** pill, meaning **Combined data for all accounts**, sits above the run of those
-rows rather than on each one. Claude Code does not record
+rows rather than on each one. It includes Cowork sessions from every account and Claude usage from
+pi, so every card in the group shows the same total. Claude Code does not record
 which account paid for a turn, so filtering by account would discard nearly the whole history and
 leave every card reading "No data". The cards do not claim ownership of a turn; Session, Weekly,
 Fable, and Extra Usage stay account-specific. Total Spend counts the combined history once.

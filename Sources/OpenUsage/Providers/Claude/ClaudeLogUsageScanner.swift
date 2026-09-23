@@ -214,8 +214,13 @@ actor ClaudeLogUsageScanner {
             addIfValid(URL(fileURLWithPath: expandHome(directory)))
         }
 
+        // Shared history is every session on this Mac, so Cowork discovery must not be narrowed to
+        // this card's account first: otherwise each card would report a different partial total and
+        // the group's history would depend on which card refreshed last.
         for sandbox in Self.coworkClaudeDirs(
-            home: homeDirectory(), organizationID: organizationID, accountID: accountID
+            home: homeDirectory(),
+            organizationID: sharesLocalHistory ? nil : organizationID,
+            accountID: sharesLocalHistory ? nil : accountID
         ) {
             addIfValid(sandbox)
         }
