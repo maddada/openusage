@@ -68,7 +68,8 @@ final class LastKnownMeterIntegrationTests: XCTestCase {
     func testAMetricASuccessfulResponseDropsStaysGone() async {
         // Regression: Claude omits Extra Usage when a successful response says it is turned off. The
         // response still has meters, so the provider answered, and the old allowance must not return.
-        let store = makeStore(defaults: makeDefaults("extraUsageOff"), snapshots: [
+        let defaults = makeDefaults("extraUsageOff")
+        let store = makeStore(defaults: defaults, snapshots: [
             snapshot([sessionLine(42), .progress(label: "Extra Usage", used: 12, limit: 50, format: .dollars)]),
             snapshot([sessionLine(43)]),
         ])
@@ -79,6 +80,14 @@ final class LastKnownMeterIntegrationTests: XCTestCase {
 
         XCTAssertFalse(store.data(for: extraUsage).hasData)
         XCTAssertFalse(store.data(for: session).isOutdated)
+
+        // Relaunch into a rate limit: the session bar stands in, the removed allowance does not.
+        let relaunched = makeStore(defaults: defaults, snapshots: [snapshot([rateLimited])])
+        await relaunched.refreshAll(force: true)
+
+        XCTAssertEqual(relaunched.data(for: session).used, 43)
+        XCTAssertTrue(relaunched.data(for: session).isOutdated)
+        XCTAssertFalse(relaunched.data(for: extraUsage).hasData)
     }
 
     func testAnotherAccountsReadingNeverPaintsAfterASwap() {

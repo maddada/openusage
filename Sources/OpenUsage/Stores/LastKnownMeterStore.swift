@@ -91,6 +91,13 @@ final class LastKnownMeterStore {
         return result
     }
 
+    /// Drops the readings for metrics a provider's successful response no longer reports.
+    func forget(_ descriptorIDs: [String]) {
+        let count = readings.count
+        for id in descriptorIDs { readings[id] = nil }
+        if readings.count != count { persist() }
+    }
+
     /// Drops every stored reading.
     func clear() {
         readings = [:]

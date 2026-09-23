@@ -376,6 +376,13 @@ final class WidgetDataStore {
             AppLog.debug(.refresh, "preserved last-good history for \(providerID) after scan miss")
         }
         localSnapshots[providerID] = snapshot
+        // A response with meters answered for every metric, so one it leaves out was removed (Claude's
+        // Extra Usage turned off) and its last-known reading must never stand in again.
+        if snapshot.lines.contains(where: \.isProgress) {
+            lastKnownMeters.forget(registry.descriptors
+                .filter { $0.providerID == providerID && snapshot.line(label: $0.metricLabel) == nil }
+                .map(\.id))
+        }
         // Stamp the write with the card's launch-resolved account identity; nil (no stamp) for
         // non-account providers and for cards whose identity didn't resolve this launch.
         cache.store(snapshot, producedByIdentityKey: providerIdentityKeys[providerID])
