@@ -46,6 +46,25 @@ final class EmailMaskTests: XCTestCase {
         XCTAssertEqual(EmailMask.mask("first.last+ou@mail.example.org"), "f•••u@•••••.•••")
     }
 
+    func testPunctuationAllowedInALocalPartMasksWhole() {
+        // RFC 5322 allows these unquoted, and the account loaders accept them, so none may leak.
+        XCTAssertEqual(EmailMask.mask("jane.smith!@example.com"), "j•••!@•••••.•••")
+        XCTAssertEqual(EmailMask.mask("jane.smith#work@example.com"), "j•••k@•••••.•••")
+        XCTAssertEqual(EmailMask.mask("jane.o'connor@example.com"), "j•••r@•••••.•••")
+        XCTAssertEqual(EmailMask.mask("a/b=c?d^e`f{g|h}i~j$k&l*m@example.com"), "a•••m@•••••.•••")
+    }
+
+    func testPunctuationInALocalPartKeepsSurroundingTextIntact() {
+        XCTAssertEqual(
+            EmailMask.mask("Codex: Acme (jane.o'connor@example.com)"),
+            "Codex: Acme (j•••r@•••••.•••)"
+        )
+        XCTAssertEqual(
+            EmailMask.mask("Claude: jane#work@example.com's Organization"),
+            "Claude: j•••k@•••••.•••'s Organization"
+        )
+    }
+
     func testTextWithoutAnEmailIsUnchanged() {
         XCTAssertEqual(EmailMask.mask("Codex: Workspace 1234abcd"), "Codex: Workspace 1234abcd")
         XCTAssertEqual(EmailMask.mask("Cursor"), "Cursor")

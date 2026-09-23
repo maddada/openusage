@@ -10,8 +10,8 @@ enum HideEmailsSetting {
     static let key = "hideAccountEmails"
     static let fallback = false
 
-    /// Live value for call sites outside the SwiftUI tree: notifications and the menu bar's
-    /// VoiceOver summary.
+    /// Live value for call sites outside the SwiftUI tree: notifications and exported share cards.
+    /// The menu bar reads `MenuBarPrivacyStore.hideEmails` instead, so it re-renders on a toggle.
     static var isEnabled: Bool {
         UserDefaults.standard.bool(forKey: key, default: fallback)
     }

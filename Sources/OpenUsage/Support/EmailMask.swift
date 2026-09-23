@@ -11,10 +11,12 @@ import Foundation
 /// swallow the closing parenthesis or the "'s" along with the domain.
 enum EmailMask {
     static func mask(_ text: String) -> String {
-        // Local part and a dotted domain, in any script. Brackets, quotes, and apostrophes are
-        // excluded from both halves so they bound the match instead of joining it. Built per call:
-        // `Regex` isn't `Sendable`, and a literal is compiled at build time, so this costs nothing.
-        let pattern = /([\p{L}\p{N}._%+\-]+)@[\p{L}\p{N}\-]+(?:\.[\p{L}\p{N}\-]+)+/
+        // Local part and a dotted domain, in any script. The local part takes every character
+        // RFC 5322 allows unquoted (`!#$%&'*+/=?^_`{|}~-` and dots), so no valid address slips
+        // through. The domain takes only letters, digits, and hyphens, so a closing parenthesis or
+        // a trailing "'s" bounds the match instead of joining it. Built per call: `Regex` isn't
+        // `Sendable`, and a literal is compiled at build time, so this costs nothing.
+        let pattern = /([\p{L}\p{N}!#$%&'*+\/=?^_`{|}~.\-]+)@[\p{L}\p{N}\-]+(?:\.[\p{L}\p{N}\-]+)+/
         return text.replacing(pattern) { match in
             let local = match.output.1
             guard let first = local.first else { return String(match.output.0) }

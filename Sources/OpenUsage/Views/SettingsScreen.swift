@@ -21,7 +21,6 @@ struct SettingsScreen: View {
     @AppStorage(AppearanceSetting.key) private var appearance = AppearanceSetting.system
     @AppStorage(TimeFormatSetting.key) private var timeFormat = TimeFormatSetting.auto
     @AppStorage(DensitySetting.key) private var density = DensitySetting.regular
-    @AppStorage(HideEmailsSetting.key) private var hideEmails = HideEmailsSetting.fallback
     @AppStorage(ReduceAnimationsSetting.key) private var reduceAnimations = ReduceAnimationsSetting.fallback
     @AppStorage(LogLevelSetting.key) private var logLevel = LogLevelSetting.fallback
     /// Surfaced under the Advanced rows when copying the path or revealing the file fails.
@@ -217,7 +216,7 @@ struct SettingsScreen: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             // Masks account emails everywhere the app shows them, the same way Ghostex does.
             row("Hide Emails") {
-                Toggle("", isOn: $hideEmails.animation(Motion.modeSwitch))
+                Toggle("", isOn: $privacy.hideEmails.animation(Motion.modeSwitch))
                     .settingsSwitchStyle()
             }
             HStack(alignment: .center, spacing: 10) {
